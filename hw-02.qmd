@@ -1,16 +1,84 @@
 ---
 title: "HW 02"
-author: "INSERT YOUR NAME HERE"
+author: "Brooke Pacheco"
 format: 
   html:
     embed-resources: true
 toc: true
 ---
+```{r}
+#| label: Set-up
+# load packages
+library(countdown)
+library(tidyverse)
+library(janitor)
+library(colorspace)
+library(broom)
+library(fs)
+library(dsbox)
+library(ggridges)
+library(ggplot2)
+library(dplyr)
+
+# set theme for ggplot2
+ggplot2::theme_set(ggplot2::theme_minimal(base_size = 11))
+
+# set width of code output
+options(width = 65)
+
+# set figure parameters for knitr
+knitr::opts_chunk$set(
+  fig.width = 7, # 7" width
+  fig.asp = 0.618, # the golden ratio
+  fig.retina = 3, # dpi multiplier for displaying HTML output on retina
+  fig.align = "center", # center align figures
+  dpi = 300 # higher dpi, sharper image
+)
+
+if (!require("pacman")) 
+  install.packages("pacman")
+
+# use this line for installing/loading
+pacman::p_load(tidyverse,
+               glue,
+               scales,
+               ggthemes) 
+
+devtools::install_github("tidyverse/dsbox")
+```
 
 ## 1 - A new day, a new plot, a new geom
 
 ```{r}
-#| label: label-me-1
+#| label: Question 1
+
+# Read in data from edinbnb data and clean 
+write_csv(edibnb, "edibnb_data.csv")
+
+edibnb |>
+  glimpse()
+
+edibnb |>
+  select(neighbourhood, review_scores_rating) |>
+  filter(!is.na(review_scores_rating)) |>
+  filter(!is.na(neighbourhood)) |>
+  group_by(neighbourhood) |>
+  mutate(median_score = median(review_scores_rating)) |>
+  ungroup() |>
+  filter(!is.na(median_score)) |>
+  mutate(neighbourhood = fct_reorder(neighbourhood, median_score)) 
+
+data <- data.frame(x = 1:5, y = rep(1, 5), height = c(0, 1, 3, 4, 2))
+ggplot(edibnb, aes(x = review_scores_rating, y = neighbourhood)) +
+  geom_density_ridges(scale = 4, rel_min_height = 0.01) +
+  coord_cartesian(clip = "off") + 
+  scale_x_continuous(limits = c(80, 103), expand = c(0, 0)) +
+  labs(
+    title = "Airbnb Review Scores of Edinburgh Neighborhoods",
+    x = "Review Score",
+    y = "Neighborhood"
+  ) +
+  theme_ridges()
 
 ```
 
