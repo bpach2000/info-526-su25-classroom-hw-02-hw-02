@@ -15,7 +15,6 @@ library(janitor)
 library(colorspace)
 library(broom)
 library(fs)
-library(dsbox)
 library(ggridges)
 library(ggplot2)
 library(dplyr)
@@ -35,16 +34,21 @@ knitr::opts_chunk$set(
   dpi = 300 # higher dpi, sharper image
 )
 
+# install pacman if needed
 if (!require("pacman")) 
   install.packages("pacman")
 
 # use this line for installing/loading
-pacman::p_load(tidyverse,
-               glue,
-               scales,
-               ggthemes) 
+pacman::p_load(
+  tidyverse, janitor, colorspace, broom, fs, 
+  ggridges, ggplot2, dplyr, countdown, ggthemes, devtools
+)
 
-devtools::install_github("tidyverse/dsbox")
+# install dsbox if needed
+if (!require("dsbox")) devtools::install_github("databrew/dsbox")
+
+# load dsbox package
+library(dsbox)
 ```
 
 ## 1 - A new day, a new plot, a new geom
@@ -52,8 +56,11 @@ devtools::install_github("tidyverse/dsbox")
 ```{r}
 #| label: Question 1
 
+# load edibnb dataset into environment
+data(edibnb)
+
 # Read in data from edinbnb data and clean 
-write_csv(edibnb, "edibnb_data.csv")
+write_csv(edibnb, "edibnb_data.csv", na = "")
 
 edibnb |>
   glimpse()
@@ -81,13 +88,67 @@ ggplot(edibnb, aes(x = review_scores_rating, y = neighbourhood)) +
   theme_ridges()
 
 ```
+### Sources
+Tools on using the write function directly used from:
+https://readr.tidyverse.org/reference/write_delim.html
+
 
 ## 2 - Foreign Connected PACs
 
 ```{r}
-#| label: label-me-2
+#| label: Question 2
+
+# get a list of files with "Foreign Connected PAC" in their names
+list_of_files <- dir_ls(path = "data", regexp = "Foreign Connected PAC")
+
+# read all files and row bind them
+# keeping track of the file name in a new column called year
+pac <- read_csv(list_of_files, id = "year") |>
+  janitor::clean_names() |>
+  mutate(year = stringr::str_extract(year, "\\d{4}"),
+         year = as.integer(year)) |>
+  separate(country_of_origin_parent_company, 
+           into = c("country_of_origin", "parent_company"), 
+           sep = "/", 
+           fill = "right") |>
+  mutate(
+    dems = readr::parse_number(dems),
+    repubs = readr::parse_number(repubs)
+  ) |>
+  select(year, pac_name_affiliate, country_of_origin, parent_company, dems, repubs) |>
+  pivot_longer(
+    cols = c(dems, repubs),
+    names_to = "party",
+    values_to = "amount"
+  ) |>
+  mutate(
+    party = case_when(
+      party == "dems" ~ "Democrat",
+      party == "repubs" ~ "Republican",
+      TRUE ~ party
+    )) |>
+  glimpse()
+
+pac
+print(pac$party)
+print(pac$amount)
 
 ```
+### Sources
+Usage of string extract inspired by:
+https://stringr.tidyverse.org/reference/str_extract.html#ref-examples
+
+Separating character string and using fill arguement inspired by: https://tidyr.tidyverse.org/reference/separate.html 
+
+Taken parse number from to remove '$' from column data:
+https://readr.tidyverse.org/reference/parse_number.html
+
+Referenced cheat sheet page for readr:
+https://readr.tidyverse.org/
+
+Referenced this page for pivot_longer parameters:
+https://tidyr.tidyverse.org/reference/pivot_longer.html
+
 
 ## 3 - Median housing prices in the US
 
