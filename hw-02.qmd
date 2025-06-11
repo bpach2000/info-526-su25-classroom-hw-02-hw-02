@@ -10,6 +10,7 @@ toc: true
 #| label: Set-up
 # load packages
 library(countdown)
+library(scales)
 library(tidyverse)
 library(janitor)
 library(colorspace)
@@ -130,8 +131,35 @@ pac <- read_csv(list_of_files, id = "year") |>
   glimpse()
 
 pac
-print(pac$party)
-print(pac$amount)
+
+uk <- pac |>
+  filter(country_of_origin %in% c("United Kingdom", "UK")) |>
+  group_by(year, party) |>
+  summarize(total_amount = sum(amount, na.rm = TRUE), .groups = "drop") |>
+  mutate(total_amount = total_amount / 1000000) |>
+  arrange(year, party)
+
+uk
+
+ggplot(uk, aes(x = year, y = total_amount, color = party, group = party)) + 
+  geom_line(linewidth = 0.8) +
+  scale_color_manual(
+    values = c("Democrat" = "blue", "Republican" = "red")
+  ) +
+  scale_x_continuous(breaks = seq(2000, 2022, 5)) +
+  labs (
+    title = "Contributions to US political parties from UK-connected PACs",
+    x = "Year",
+    y = "Total amount",
+    color = "Party",       
+    caption = "Source: OpenSecrets.org" 
+  ) +
+  scale_y_continuous(labels = label_dollar(suffix = "M")) +
+  theme_minimal(base_size = 11) + 
+  theme(
+    axis.title.x = element_text(hjust = 0),  
+    axis.title.y = element_text(hjust = 0)
+  )
 
 ```
 ### Sources
